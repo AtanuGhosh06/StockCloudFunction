@@ -1,0 +1,64 @@
+from google.cloud import bigquery
+from google.cloud import storage
+
+def storage_to_bigquery_end(self):
+  client = bigquery.Client()
+  sto_client=storage.Client()
+  source_bucket = sto_client.get_bucket('atgh-daily-stock-var-data')
+  destination_bucket = sto_client.get_bucket('atgh-daily-stock-var-arc')
+  #source_blob = source_bucket.blob(blob_name)
+
+  files = source_bucket.list_blobs()
+  fileList = [file.name for file in files]
+
+  for filenames in fileList:
+    if filenames.startswith('cm'):
+      table_ref = client.dataset('atgh_daily_stock_var').table('atgh_daily_market_snap')
+      job_config = bigquery.LoadJobConfig()
+      job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
+      job_config.skip_leading_rows = 1
+      job_config.source_format = bigquery.SourceFormat.CSV
+      uri = "gs://atgh-daily-stock-var-data/"+ filenames
+      load_job = client.load_table_from_uri(uri, table_ref, job_config=job_config)  # API request
+      load_job.result()  # Waits for table load to complete.
+      destination_table = client.get_table(table_ref)
+      source_bucket = sto_client.get_bucket(source_bucket)
+      source_blob = source_bucket.blob(filenames)
+      new_blob = source_bucket.copy_blob(source_blob, destination_bucket, filenames)
+      source_blob.delete()
+
+    if filenames.startswith('MTO'):
+      table_ref = client.dataset('atgh_daily_stock_var').table('atgh_daily_mrkt_delivery')
+      job_config = bigquery.LoadJobConfig()
+      job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
+      job_config.skip_leading_rows = 4
+      job_config.source_format = bigquery.SourceFormat.CSV
+      uri = "gs://atgh-daily-stock-var-data/"+ filenames
+      load_job = client.load_table_from_uri(uri, table_ref, job_config=job_config)  # API request
+      load_job.result()  # Waits for table load to complete.
+      destination_table = client.get_table(table_ref)
+      source_bucket = sto_client.get_bucket(source_bucket)
+      source_blob = source_bucket.blob(filenames)
+      new_blob = source_bucket.copy_blob(source_blob, destination_bucket, filenames)
+      source_blob.delete()
+
+
+    
+    
+    
+    if filenames.startswith('CMVOLT'):
+      table_ref = client.dataset('atgh_daily_stock_var').table('atgh_daily_market_volatility')
+      job_config = bigquery.LoadJobConfig()
+      job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
+      job_config.skip_leading_rows = 1
+      job_config.source_format = bigquery.SourceFormat.CSV
+      uri = "gs://atgh-daily-stock-var-data/"+ filenames
+      load_job = client.load_table_from_uri(uri, table_ref, job_config=job_config)  # API request
+      load_job.result()  # Waits for table load to complete.
+      destination_table = client.get_table(table_ref)
+      source_bucket = sto_client.get_bucket(source_bucket)
+      source_blob = source_bucket.blob(filenames)
+      new_blob = source_bucket.copy_blob(source_blob, destination_bucket, filenames)
+      source_blob.delete()
+
+  
