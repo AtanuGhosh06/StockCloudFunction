@@ -1,0 +1,59 @@
+from datetime import datetime
+import os
+import subprocess
+from google.cloud import storage
+
+def daily_stock_dayend(self):
+
+## Getting the List form the Bucket
+  client = storage.Client()
+  client_d = storage.Client()
+  #bucket_name = client.bucket('atgh-daily-stock-volume-data/')
+  bucket_name = 'atgh-daily-stock-volume-data'
+  bucket = client.get_bucket(bucket_name)
+
+  bucket_name_d = 'atgh-daily-stock-var-data'
+  bucket_d = client_d.get_bucket(bucket_name_d)
+
+  todaydatebhav=datetime.today().strftime('%d%b%Y').upper()
+  todaymon=datetime.today().strftime('%b').upper()
+  todayyear=datetime.today().strftime('%Y').upper()
+  filename=todaydatebhav+'.txt'
+  blob = bucket.blob(filename)
+  blob.download_to_filename('/tmp/'+filename)
+  
+## Downloading the files  
+  List = open('/tmp/'+filename).readlines()
+
+  for itr,element in enumerate(List):
+    if (element.split('|')[1]=='N\n'):
+      out=subprocess.call(["wget", element.split('|')[0],"-P","/tmp/"])
+      #print('In here again')
+      if out==0:
+        
+        new_file_name='D'
+        List[itr]=str(element.split('|')[0])+str('|D\n')
+        object_name = '/tmp/'+element.split('|')[0].split('/')[-1]
+        if object_name.endswith('zip'):
+          unzipping=subprocess.call(["unzip",object_name,"-d","/tmp"])
+          deleteing=subprocess.call(["rm","-rf",object_name])
+          outfile=element.split('|')[0].split('/')[-1].split('.zip')[0]
+        else:
+          outfile = element.split('|')[0].split('/')[-1]
+
+        new_object_name='/tmp/'+outfile
+        datetogo=datetime.today().strftime('%d%m%Y')
+        file_num=element.split('/')[-1].split('|')[0]
+        blob_d = bucket_d.blob(outfile)
+        blob_d.upload_from_filename(new_object_name)
+
+  with open('/tmp/'+filename, 'w') as f:
+      for item in List:
+        f.write(item) 
+#Uploading the file back to GCS
+  blob = bucket.blob(filename)
+  blob.upload_from_filename('/tmp/'+filename)
+
+
+if __name__== "__main__":
+  daily_stock_dayend()
